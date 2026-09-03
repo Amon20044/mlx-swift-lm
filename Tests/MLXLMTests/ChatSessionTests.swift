@@ -1711,6 +1711,26 @@ public class ChatSessionTests: XCTestCase {
         XCTAssertGreaterThan(result.count, targetLength, result)
     }
 
+    func testSaveCachePreservesCallerMetadata() async throws {
+        let session = ChatSession(model(), generateParameters: generationParameters)
+        _ = try await session.respond(to: "hello")
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("safetensors")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let metadata = [
+            "model": "example/model",
+            "revision": "abc123",
+            "prompt": "conversation-42",
+        ]
+        try await session.saveCache(to: url, metadata: metadata)
+
+        let restored = try loadPromptCacheSnapshot(url: url)
+        XCTAssertEqual(restored.metadata, metadata)
+    }
+
     func testSaveCachePreservesRestoredState() async throws {
         let cache = KVCacheSimple()
         _ = cache.update(

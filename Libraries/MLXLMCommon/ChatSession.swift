@@ -495,7 +495,7 @@ public final class ChatSession {
     /// Initialize the `ChatSession` with a pre-built KV cache.
     ///
     /// This enables prefix caching: build a KV cache from a long shared context (e.g. a
-    /// system prompt and document) once, save it via ``saveCache(to:)``, and restore it
+    /// system prompt and document) once, save it via ``saveCache(to:metadata:)``, and restore it
     /// across multiple sessions to avoid re-prefilling the same tokens each time.
     ///
     /// > Important: If the cache was built from a session that already included system
@@ -562,7 +562,7 @@ public final class ChatSession {
     /// Initialize the `ChatSession` with a pre-built KV cache.
     ///
     /// This enables prefix caching: build a KV cache from a long shared context (e.g. a
-    /// system prompt and document) once, save it via ``saveCache(to:)``, and restore it
+    /// system prompt and document) once, save it via ``saveCache(to:metadata:)``, and restore it
     /// across multiple sessions to avoid re-prefilling the same tokens each time.
     ///
     /// > Important: If the cache was built from a session that already included system
@@ -1536,14 +1536,23 @@ public final class ChatSession {
     /// > structured tool continuations. Persist the messages separately and restore
     /// > them with a history initializer when the transcript is required.
     ///
-    /// - Parameter url: the file URL to write the cache to
+    /// - Parameters:
+    ///   - url: the file URL to write the cache to
+    ///   - metadata: caller metadata to store with the cache snapshot
     /// - Throws: ``ChatSessionError/noCacheAvailable`` if no generation has occurred yet,
     ///   or any error thrown by the underlying file write
-    public func saveCache(to url: URL) async throws {
+    public func saveCache(
+        to url: URL,
+        metadata: [String: String] = [:]
+    ) async throws {
         try await cache.read { cache in
             switch cache {
             case .kvcache(let stored):
-                try savePromptCache(url: url, cache: stored.main.cache, state: stored.state)
+                try savePromptCache(
+                    url: url,
+                    cache: stored.main.cache,
+                    metadata: metadata,
+                    state: stored.state)
             default:
                 throw ChatSessionError.noCacheAvailable
             }
@@ -1553,7 +1562,7 @@ public final class ChatSession {
 
 /// Errors thrown by ``ChatSession``.
 public enum ChatSessionError: LocalizedError {
-    /// ``ChatSession/saveCache(to:)`` was called before any generation occurred.
+    /// ``ChatSession/saveCache(to:metadata:)`` was called before any generation occurred.
     case noCacheAvailable
     /// The processor produced no tokens for generation.
     case emptyPreparedInput
